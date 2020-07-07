@@ -10,6 +10,8 @@ if [ ! -d .git ]; then
 	git remote add origin ${DRONE_REMOTE_URL}
 fi
 
+git config http.sslVerify "false"
+
 # the branch may be empty for certain event types,
 # such as github deployment events. If the branch
 # is empty we checkout the sha directly. Note that
@@ -28,3 +30,5 @@ set -x
 
 git fetch ${FLAGS} origin +refs/heads/${DRONE_COMMIT_BRANCH}:
 git checkout ${DRONE_COMMIT_SHA} -b ${DRONE_COMMIT_BRANCH}
+git submodule init
+git submodule update --recursive --remote

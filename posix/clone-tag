@@ -15,3 +15,5 @@ set -x
 
 git fetch ${FLAGS} origin +refs/tags/${DRONE_TAG}:
 git checkout -qf FETCH_HEAD
+git submodule init
+git submodule update --recursive --remote
