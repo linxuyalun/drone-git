@@ -6,39 +6,44 @@ package posix
 const Clone = `#!/bin/sh
 
 if [[ ! -z "${DRONE_WORKSPACE}" ]]; then
-  cd ${DRONE_WORKSPACE}
+        cd ${DRONE_WORKSPACE}
 fi
 
 # if the netrc enviornment variables exist, write
 # the netrc file.
 
 if [[ ! -z "${DRONE_NETRC_MACHINE}" ]]; then
-	cat <<EOF > /root/.netrc
+        cat <<EOF > /root/.netrc
 machine ${DRONE_NETRC_MACHINE}
 login ${DRONE_NETRC_USERNAME}
 password ${DRONE_NETRC_PASSWORD}
 EOF
 fi
 
-# you need to put your ssh file in your working dir
-mkdir /root/.ssh
-cat /ssh_rsa > /root/.ssh/id_rsa
-chmod 600 /root/.ssh/id_rsa
+# if the ssh_key environment variable exists, write
+# the ssh key and add the netrc machine to the
+# known hosts file.
 
-touch /root/.ssh/known_hosts
-chmod 600 /root/.ssh/known_hosts
-ssh-keyscan -H ${DRONE_NETRC_MACHINE} > /etc/ssh/ssh_known_hosts 2> /dev/null
+if [[ ! -z "${SSH_KEY}" ]]; then
+        mkdir /root/.ssh
+        echo -n "$SSH_KEY" > /root/.ssh/id_rsa
+        chmod 600 /root/.ssh/id_rsa
+
+        touch /root/.ssh/known_hosts
+        chmod 600 /root/.ssh/known_hosts
+        ssh-keyscan -H ${DRONE_NETRC_MACHINE} > /etc/ssh/ssh_known_hosts 2> /dev/null
+fi
 
 # configure git global behavior and parameters via the
 # following environment variables:
 
 
 if [[ -z "${DRONE_COMMIT_AUTHOR_NAME}" ]]; then
-  export DRONE_COMMIT_AUTHOR_NAME=drone
+        export DRONE_COMMIT_AUTHOR_NAME=drone
 fi
 
 if [[ -z "${DRONE_COMMIT_AUTHOR_EMAIL}" ]]; then
-  export DRONE_COMMIT_AUTHOR_EMAIL=drone@localhost
+        export DRONE_COMMIT_AUTHOR_EMAIL=drone@localhost
 fi
 
 export GIT_AUTHOR_NAME=${DRONE_COMMIT_AUTHOR_NAME}
@@ -53,21 +58,18 @@ export GIT_COMMITTER_EMAIL=${DRONE_COMMIT_AUTHOR_EMAIL}
 CLONE_TYPE=$DRONE_BUILD_EVENT
 case $DRONE_COMMIT_REF in
   refs/tags/* ) CLONE_TYPE=tag ;;
-  refs/pull/* ) CLONE_TYPE=pull_request ;;
-  refs/pull-request/* ) CLONE_TYPE=pull_request ;;
-  refs/merge-requests/* ) CLONE_TYPE=pull_request ;;
 esac
 
 case $CLONE_TYPE in
 pull_request)
-	clone-pull-request
-	;;
+        clone-pull-request
+        ;;
 tag)
-	clone-tag
-	;;
+        clone-tag
+        ;;
 *)
-	clone-commit
-	;;
+        clone-commit
+        ;;
 esac
 `
 
@@ -76,27 +78,12 @@ const CloneCommit = `#!/bin/sh
 
 FLAGS=""
 if [[ ! -z "${PLUGIN_DEPTH}" ]]; then
-	FLAGS="--depth=${PLUGIN_DEPTH}"
+        FLAGS="--depth=${PLUGIN_DEPTH}"
 fi
 
 if [ ! -d .git ]; then
-	git init
-	git remote add origin ${DRONE_REMOTE_URL}
-fi
-
-git config http.sslVerify "false"
-
-# the branch may be empty for certain event types,
-# such as github deployment events. If the branch
-# is empty we checkout the sha directly. Note that
-# we intentially omit depth flags to avoid failed
-# clones due to lack of history.
-if [[ -z "${DRONE_COMMIT_BRANCH}" ]]; then
-	set -e
-	set -x
-	git fetch origin
-	git checkout -qf ${DRONE_COMMIT_SHA}
-	exit 0
+        git init
+        git remote add origin ${DRONE_REMOTE_URL}
 fi
 
 set -e
@@ -104,8 +91,6 @@ set -x
 
 git fetch ${FLAGS} origin +refs/heads/${DRONE_COMMIT_BRANCH}:
 git checkout ${DRONE_COMMIT_SHA} -b ${DRONE_COMMIT_BRANCH}
-git submodule init
-git submodule update --recursive --remote
 `
 
 // Contents of clone-pull-request
@@ -113,14 +98,14 @@ const ClonePullRequest = `#!/bin/sh
 
 FLAGS=""
 if [[ ! -z "${PLUGIN_DEPTH}" ]]; then
-	FLAGS="--depth=${PLUGIN_DEPTH}"
+        FLAGS="--depth=${PLUGIN_DEPTH}"
 fi
 
 if [ ! -d .git ]; then
-	git init
-	git remote add origin ${DRONE_REMOTE_URL}
+        git init
+        git remote add origin ${DRONE_REMOTE_URL}
 fi
-git config http.sslVerify "false"
+
 set -e
 set -x
 
@@ -129,9 +114,6 @@ git checkout ${DRONE_COMMIT_BRANCH}
 
 git fetch origin ${DRONE_COMMIT_REF}:
 git merge ${DRONE_COMMIT_SHA}
-
-git submodule init
-git submodule update --recursive --remote
 `
 
 // Contents of clone-tag
@@ -139,12 +121,12 @@ const CloneTag = `#!/bin/sh
 
 FLAGS=""
 if [[ ! -z "${PLUGIN_DEPTH}" ]]; then
-	FLAGS="--depth=${PLUGIN_DEPTH}"
+        FLAGS="--depth=${PLUGIN_DEPTH}"
 fi
 
 if [ ! -d .git ]; then
-	git init
-	git remote add origin ${DRONE_REMOTE_URL}
+        git init
+        git remote add origin ${DRONE_REMOTE_URL}
 fi
 
 set -e
@@ -152,6 +134,4 @@ set -x
 
 git fetch ${FLAGS} origin +refs/tags/${DRONE_TAG}:
 git checkout -qf FETCH_HEAD
-git submodule init
-git submodule update --recursive --remote`
-
+`

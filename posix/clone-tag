@@ -1,5 +1,11 @@
 #!/bin/sh
 
+SSH_URL=$${SSH_ADDRESS_PREFIX}
+REPONAME=${DRONE_REMOTE_URL#*$${HTTPS_ADDRESS_PREFIX}}
+SSH_REPO=${SSH_URL}${REPONAME}
+echo "Repo ssh address:"
+echo ${SSH_REPO}
+
 FLAGS=""
 if [[ ! -z "${PLUGIN_DEPTH}" ]]; then
 	FLAGS="--depth=${PLUGIN_DEPTH}"
@@ -7,8 +13,9 @@ fi
 
 if [ ! -d .git ]; then
 	git init
-	git remote add origin ${DRONE_REMOTE_URL}
+	git remote add origin ${SSH_REPO}
 fi
+git config http.sslVerify "false"
 
 set -e
 set -x

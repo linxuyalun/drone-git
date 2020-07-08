@@ -1,39 +1,43 @@
-#!/bin/sh
-
+#!/bin/sh                                                                                                                                                                                                                                                                                                              [0/533]
 if [[ ! -z "${DRONE_WORKSPACE}" ]]; then
-  cd ${DRONE_WORKSPACE}
+        cd ${DRONE_WORKSPACE}
 fi
 
 # if the netrc enviornment variables exist, write
 # the netrc file.
 
-if [[ ! -z "${DRONE_NETRC_MACHINE}" ]]; then
-	cat <<EOF > /root/.netrc
-machine ${DRONE_NETRC_MACHINE}
-login ${DRONE_NETRC_USERNAME}
-password ${DRONE_NETRC_PASSWORD}
+        cat <<EOF > /root/.netrc
+machine $${GIT_REPO_MACHINE_IP}
+login $${MACHINE_USERNAME}
+password $${MACHINE_PASSWORD}
 EOF
-fi
 
-# you need to put your ssh file in your working dir
+
+# if the ssh_key environment variable exists, write
+# the ssh key and add the netrc machine to the
+# Do remember to put your own ssh key in the repo.
+
 mkdir /root/.ssh
 cat /ssh_rsa > /root/.ssh/id_rsa
 chmod 600 /root/.ssh/id_rsa
 
 touch /root/.ssh/known_hosts
 chmod 600 /root/.ssh/known_hosts
-ssh-keyscan -H ${DRONE_NETRC_MACHINE} > /etc/ssh/ssh_known_hosts 2> /dev/null
+ssh-keyscan -t rsa -p $${GIT_REPO_MACHINE_PORT} $${GIT_REPO_MACHINE_IP} > /root/.ssh/known_hosts 2> /dev/null
 
 # configure git global behavior and parameters via the
 # following environment variables:
 
+echo "SSH to server to verify private key..."
+ssh -T -p $${GIT_REPO_MACHINE_PORT} git@$${GIT_REPO_MACHINE_IP} -i /root/.ssh/id_rsa
+
 
 if [[ -z "${DRONE_COMMIT_AUTHOR_NAME}" ]]; then
-  export DRONE_COMMIT_AUTHOR_NAME=drone
+        export DRONE_COMMIT_AUTHOR_NAME=drone
 fi
 
 if [[ -z "${DRONE_COMMIT_AUTHOR_EMAIL}" ]]; then
-  export DRONE_COMMIT_AUTHOR_EMAIL=drone@localhost
+        export DRONE_COMMIT_AUTHOR_EMAIL=drone@localhost
 fi
 
 export GIT_AUTHOR_NAME=${DRONE_COMMIT_AUTHOR_NAME}
@@ -55,12 +59,12 @@ esac
 
 case $CLONE_TYPE in
 pull_request)
-	clone-pull-request
-	;;
+        clone-pull-request
+        ;;
 tag)
-	clone-tag
-	;;
+        clone-tag
+        ;;
 *)
-	clone-commit
-	;;
+        clone-commit
+        ;;
 esac

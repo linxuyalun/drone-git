@@ -1,13 +1,23 @@
 #!/bin/sh
 
+echo "Origin https remote url:"
+echo ${DRONE_REMOTE_URL}
+
+SSH_URL=$${SSH_ADDRESS_PREFIX}
+REPONAME=${DRONE_REMOTE_URL#*$${HTTPS_ADDRESS_PREFIX}}
+SSH_REPO=${SSH_URL}${REPONAME}
+echo "Repo ssh address:"
+echo ${SSH_REPO}
+
+
 FLAGS=""
 if [[ ! -z "${PLUGIN_DEPTH}" ]]; then
-	FLAGS="--depth=${PLUGIN_DEPTH}"
+        FLAGS="--depth=${PLUGIN_DEPTH}"
 fi
 
 if [ ! -d .git ]; then
-	git init
-	git remote add origin ${DRONE_REMOTE_URL}
+        git init
+        git remote add origin ${SSH_REPO}
 fi
 
 git config http.sslVerify "false"
@@ -30,5 +40,3 @@ set -x
 
 git fetch ${FLAGS} origin +refs/heads/${DRONE_COMMIT_BRANCH}:
 git checkout ${DRONE_COMMIT_SHA} -b ${DRONE_COMMIT_BRANCH}
-git submodule init
-git submodule update --recursive --remote
